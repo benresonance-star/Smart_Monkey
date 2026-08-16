@@ -3604,15 +3604,42 @@ function Field({label,children,hint,helpText:helpCopy,formula}){
 }
 function SliderInput({value,onChange,min=0,max=100,step=1}){
   const clamp=v=>Math.min(max,Math.max(min,v));
-  const pct=Math.max(0,Math.min(100,((value-min)/(max-min||1))*100));
+  const [text,setText]=useState(String(value));
+  const [focused,setFocused]=useState(false);
+  React.useEffect(()=>{
+    if(!focused) setText(String(value));
+  },[value,focused]);
   return e("div",{className:"slider-row"},
     e("input",{
       type:"range",className:"wise-slider",min,max,step,value:clamp(value),
-      onChange:x=>onChange(Number(x.target.value))
+      onChange:x=>{
+        const next=Number(x.target.value);
+        setText(String(next));
+        onChange(next);
+      }
     }),
     e("input",{
-      type:"number",className:"slider-value",value,min,step,
-      onChange:x=>{const n=Number(x.target.value);if(Number.isFinite(n))onChange(clamp(n));}
+      type:"text",
+      inputMode:step%1===0?"numeric":"decimal",
+      className:"slider-value",
+      value:focused?text:String(value),
+      onFocus:x=>{
+        setFocused(true);
+        setText(String(value));
+        x.target.select();
+      },
+      onChange:x=>{
+        const raw=x.target.value;
+        if(!/^-?\d*\.?\d*$/.test(raw)) return;
+        setText(raw);
+      },
+      onBlur:x=>{
+        const raw=x.target.value.trim();
+        const n=Number(raw);
+        if(raw!==""&&Number.isFinite(n)) onChange(clamp(n));
+        setFocused(false);
+      },
+      onKeyDown:x=>{if(x.key==="Enter") x.currentTarget.blur();}
     })
   );
 }
